@@ -1,0 +1,123 @@
+---
+title: "Homework 1"
+author: "Sofia White, EID: saw4448"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=6, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+
+```
+
+GitHub : <https://github.com/sofiaw27/SDS-315.git>
+
+# Problem 1
+
+## Part A
+
+```{r echo=FALSE, message=FALSE}
+library(tidyverse)
+library(ggplot2)
+creatinine = read.csv("creatinine.csv")
+ggplot(creatinine, aes(x = age, y= creatclear)) + geom_point()+ geom_smooth(method = "lm", se = FALSE, color = "blue")
+
+#lm(age ~ creatclear, data = creatinine)
+```
+
+The expected creatinine rate for a 55 year old is 112.608 found from (172.283 + -1.085(55)). The linear regression line on the graph also supports this.
+
+## Part B
+
+The creatinine clearance rate changes at a rate of -1.085 ml/minute per year. This means for every year that passes the creatinine clearance rate drops at that rate stated above. This is found from the taking the slope of the linear regression line for the data which was extracted using the lm() function in R.
+
+## Part C
+
+In this scenario, the 40-year-old has a healthier creatinine clearance rate than the 60-year-old. Although both of these people are above average for their age, the 40-year-old has a healthier rate because 135 is 6 ml/min higher than the average for 40 year olds, whereas the 60-year-old is only 4.8 ml/min above the average for 60-year-olds. This was found by taking the individual rates and subtracting the expected rate for that given age. 135 - (172.283 + (-1.085)\*(40)) and 135 - (172.283 + (-1.085)\*(40))
+
+```{r, echo=F, message=FALSE}
+# 135 - (172.283 + (-1.085)*(40))
+# 135 - (172.283 + (-1.085)*(40))
+```
+
+# Problem 2
+
+## Part A
+
+The "beta" of a stock, as used in the Capital Asset Pricing Model (CAPM), measures the stock's sensitivity to movements in the overall market, typically represented by a market index like the S&P 500. In simpler terms, it tells us how much a stock's return tends to move in relation to changes in the market return. In the regression model described, the beta (β1) is the slope coefficient. It represents the expected change in the stock's return for a one-unit change in the market return. A beta greater than 1 indicates that the stock is more volatile than the market, while a beta less than 1 suggests it's less volatile. To calculate beta, you run a linear regression of the stock's returns against the market returns. The slope coefficient of this regression is the beta. If the stock's return is denoted by Y and the market return by X, then beta is calculated as the covariance of Y and X divided by the variance of X. Beta is crucial in finance because it helps investors understand how a stock is likely to perform relative to the market. Stocks with high betas tend to have higher returns during market upswings but also larger losses during downturns, while low-beta stocks are more stable but offer lower potential returns. In summary, beta quantifies the systematic risk of a stock, providing investors with valuable insights into its behavior relative to the broader market. By analyzing the beta of individual stocks, investors can make informed decisions about portfolio diversification and risk management strategies.
+
+```{r echo=FALSE, message=FALSE}
+library(kableExtra)
+library(lubridate)
+
+market = read_csv("marketmodel.csv")
+#ggplot(market, aes(x = SPY, y= TGT)) + geom_point()+ geom_smooth(method = "lm", se = FALSE, color = "blue")
+
+#model = lm(AAPL ~ SPY, data = market)
+#(summary(model)$coef)[1,1]
+
+market_table = market|>
+  pivot_longer(cols = AAPL:TGT, names_to = "company",values_to = "return" )|>
+  group_by(company)|>
+  summarise(intercept = (summary(lm(return ~ SPY))$coef)[1,1], 
+            slope = (summary(lm(return ~ SPY))$coef)[2,1],
+            r_squared = (summary(lm(return ~ SPY))$r.squared)
+            )
+  
+
+
+market_table |>
+  kable(format = "html", caption = "Stock Information Table") |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) |>
+    row_spec(0, bold = T)|>
+  column_spec(1, bold = T, border_right = T) |>
+  column_spec(2, bold = F, border_right = T)|>
+  column_spec(3, bold = F, border_right = T)|>
+  kable_classic(full_width = TRUE, html_font = "Cambria")
+  
+
+```
+
+The table above displays the results of linear regression of companies on S&P 500 daily returns. The slope represent $\beta_1$ in the Capital Asset Pricing Model. The higher the slope the more risk the company has for how the stock market fluctuates. R squared is the amount of variation in company daily prices explained by variation overall market.
+
+# Problem 3
+
+```{r echo=F, message=FALSE}
+covid = read_csv("covid.csv")
+
+italy_covid = covid|>
+  filter(country == "Italy")
+spain_covid = covid|>
+  filter(country == "Spain")
+
+#lm_italy = lm(log(deaths) ~ days_since_first_death, data = italy_covid)
+#lm_spain = lm(log(deaths) ~ days_since_first_death, data = spain_covid)
+#coef(lm_italy)
+#coef(lm_spain)
+
+ggplot(covid, aes(x = days_since_first_death, y = deaths, color = country)) + geom_line(size = 1) + geom_point() + labs(title = "Covid Death Rates", x = "Days since first death")
+
+
+
+
+
+
+```
+
+The estimated growth rate for Italy is 18.3% per day with a doubling time of about 4 days.
+
+The estimated growth rate for Spain is 27.6% per day with a doubling time of about 3 days.
+
+# Problem 4
+
+```{r echo=FALSE, message=FALSE}
+milk= read_csv("milk.csv")
+ggplot(milk,aes(x = log(price), y = log(sales)))+geom_point() + geom_smooth(method = "lm") + labs(title = "Milk prices and sales on a log scale")
+
+milk_lm = lm(log(sales) ~ log(price), data = milk) 
+#coef(milk_lm)
+
+```
+
+The elasticity for demand for milk is about -1.6. I took the log of both axis to create the straightest line for a linear model, then I used the lm() function and inputted the log variables and extracted the coefficients to get a slope of -1.6 which represents the elasticity.
