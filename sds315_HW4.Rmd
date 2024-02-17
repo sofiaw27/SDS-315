@@ -1,0 +1,208 @@
+---
+title: "Homework 4"
+author: "Sofia White, saw4448"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=6, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+
+```
+
+GitHub : <https://github.com/sofiaw27/SDS-315.git>
+
+# Problem 1
+
+```{r echo=FALSE, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(mosaic)
+gas_prices = read.csv("gasprices.csv")
+
+gas_prices|>
+  group_by(Competitors)|>
+  summarise(mean = mean(Price))
+## A
+mean(Price~Competitors, data=gas_prices)
+diffmean(Price~Competitors, data=gas_prices)
+boot_comp = do(10000)*diffmean(Price~Competitors, data=resample(gas_prices))
+confint(boot_comp, level=0.95)
+ggplot(boot_comp) + geom_histogram(aes(x = diffmean))
+## B
+lm(Price~Income, data=gas_prices)
+boot_income = do(10000)*lm(Price~Income, data=resample(gas_prices))
+conf_income = confint(boot_income, level=0.95)
+## C
+mean(Price~Stoplight, data=gas_prices)
+diffmean(Price~Stoplight, data=gas_prices)
+boot_sl = do(10000)*diffmean(Price~Stoplight, data=resample(gas_prices))
+confint(boot_sl, level=0.95)
+##D
+mean(Price~Highway, data=gas_prices)
+diffmean(Price~Highway, data=gas_prices)
+boot_hw = do(10000)*diffmean(Price~Highway, data=resample(gas_prices))
+confint(boot_hw, level=0.95)
+## E
+gas_prices = gas_prices|>
+  mutate(isShell = Brand == "Shell")
+mean(Price~isShell, data=gas_prices)
+diffmean(Price~isShell, data=gas_prices)
+boot_shell = do(10000)*diffmean(Price~isShell, data=resample(gas_prices))
+confint(boot_shell, level=0.95)
+```
+
+## Theory A
+
+Claim: Gas Stations charge more if they have direct competition in sight.
+
+Evidence: The difference between the mean prices taken from only the sample is -0.02, meaning the gas stations that have no competition in sight will charge an average of 2 cents higher. However, when we bootstrap the sample and resample 10,000 times we can be 95% confident that the average price at gas stations that has no competition in sight will charge anywhere from to 1 cent lower to 5 cents higher. This is statistically insignificant.
+
+Conclusion: This theory is supported by the data to estimate the wider population.
+
+## Theory B
+
+\
+Claim: The richer the area, the higher the gas prices.
+
+Evidence: Just looking at the sample, for every 100K income the gas price will increase by about 12 cents. For an estimate for all American gas stations I am 95% confident that for every 100K in income the gas price will increase anywhere from 7 cents to 18 cents. This is statistically and practically significant.
+
+Conclusion: This theory is supported by the data to estimate the wider population. Richer areas are likely to have more expensive gas.
+
+## Theory C
+
+\
+Claim: Gas stations at stoplights charge more.
+
+Evidence: Just looking at the sample the gas stations that are NOT at stoplights actually average a slightly lower price with the difference between the two options being \$-0.003, not even one cent. To estimate for a larger population, I am 95% confident that a gas station at a stoplight will charge anywhere from 4 cents lower to 3 cents higher. This is statistically insignificant.
+
+Conclusion: Based on the data from the sample and the our estimate we can confidently debunk this theory.
+
+## Theory D
+
+\
+Claim: Gas stations with direct highway access charge more.
+
+Evidence: From the sample the difference between the average prices of gas stations with direct highway access vs no highway access is about 5 cents with stations next to highways charging more. To estimate for all American gas stations I am 95% confident that a gas station next to a highway will charge anywhere from 1 to 8 cents more. This is statistically significant.
+
+Conclusion: The data from the sample and the bootstrapped data both lead to the support of the theory.
+
+## Theory E
+
+Claim: Shell charges more than all other non-Shell brands.
+
+Evidence: According to the sample, the difference between the average prices at Shell are about 3 cents higher than other brands. To estimate for all American gas stations, I am 95% confident that a Shell gas station will charge anywhere from 1 cent lower to 7 cents higher. This is statistically insignificant.
+
+Conclusion: The data does not statistically support the claim but according to the interval on more occasions than not Shell will charge more. \
+
+# Problem 2
+
+```{r include=FALSE, echo=FALSE}
+sclass = read_csv("sclass.csv")
+sclass_2 = sclass|>
+            filter(year == 2011 & trim == "63 AMG")
+boot_car = do(10000)*mean(~mileage, data=resample(sclass_2))
+conf_car = confint(boot_car, level=0.95)
+ggplot(boot_car) + geom_histogram(aes(x = mean))
+
+sclass_3 = sclass|>
+            filter(year == 2014 & trim == "550")|>
+            mutate(isBlack = color== "Black")
+boot_car2 = do(10000)*prop(~isBlack, data=resample(sclass_3))
+conf_car2 = confint(boot_car2, level=0.95)
+ggplot(boot_car2) + geom_histogram(aes(x = prop_TRUE))
+
+```
+
+## Part A
+
+With 95% confidence, the average mileage for a 2011 S-Class 63 AMG is between 26,272.88 and 31,783.2 miles.
+
+## Part B
+
+Based on the data, with 95% confidence, somewhere between 41.7% and 45.3% of S-Class 2014 550s were painted black.
+
+# Problem 3
+
+## Part A
+
+```{r include=FALSE, echo=FALSE}
+nbc = read_csv("nbc_pilotsurvey.csv")
+nbc_q1 <- nbc |>
+  filter(Show == "Living with Ed" | Show == "My Name is Earl") |>
+  select(Q1_Happy, Show)
+
+boot_nbc1 <- do(10000)*diffmean(Q1_Happy~Show, data=resample(nbc_q1))
+conf_nbc1 <- confint(boot_nbc1, level=0.95)
+ggplot( boot_nbc1) + geom_histogram(aes(x = diffmean))
+
+```
+
+Question: What is the difference in the average viewer happiness score between the two shows and how statistically certain can we estimate that for the wider population?
+
+Approach: I used bootstrapping with the diffmean() function to estimate the difference of average happiness score based on the show.
+
+Results: The difference of the mean for the sample is -0.25. I am 95% confident that the average viewer response to happiness would differ from -0.4 to 0.1 points. Since the interval includes zero, the difference is statistically insignificant.
+
+Conclusion: Based on the sample, "Living with Ed" makes the viewers from the data slightly more happy than "My name is Earl", but to estimate the wider population we cannot say whether either show will make an average viewer happier.
+
+## Part B
+
+```{r include=FALSE, echo=FALSE}
+nbc_q2 = nbc|>
+  filter(Show == "The Biggest Loser" | Show == "The Apprentice: Los Angeles")|>
+  select(Show, Q1_Annoyed)
+
+boot_nbc2 <- do(10000)*diffmean(Q1_Annoyed~Show, data=resample(nbc_q2))
+conf_nbc2 <- confint(boot_nbc2, level=0.95)
+ggplot( boot_nbc2) + geom_histogram(aes(x = diffmean))
+```
+
+Question: What is the difference in the average viewer annoyed score between the two shows and how statistically certain can we estimate that for the wider population?
+
+Approach: I used bootstrapping and the diffmean() function to analyze the difference of the mean of Q1_Annoyed for Show and resampled 10000 times from the original sample.
+
+Result: The data from the sample shows the difference in the average annoy score is -0.17. I am 95% confident that the difference in mean viewer annoyed response for the two shows is somewhere between -0.5 and -0.02 points. This is statistically significant since 0 is not included in the interval.
+
+Conclusion: Given the sample, "The Apprentice: LA" makes the viewers slightly more annoyed than "The Biggest Loser". In a practical setting, TV networks should think of airing "The Biggest Loser" instead of "The Apprentice: LA" in order to prevent their viewers from becoming annoyed.
+
+## Part C
+
+```{r include=FALSE, echo=FALSE}
+nbc_q3 = nbc|>
+  filter(Show == "Dancing with the Stars")|>
+  select(Show, Q2_Confusing)|>
+  mutate(above_four = Q2_Confusing >=4)
+
+boot_nbc3 <- do(10000)*prop(~above_four, data=resample(nbc_q3))
+conf_nbc3 <- confint(boot_nbc3, level=0.95)
+ggplot( boot_nbc3) + geom_histogram(aes(x = prop_TRUE))
+```
+
+Question: What proportion of Americans can we expect to either agree or strongly agree that the show Dancing with the Stars is confusing?
+
+Approach: I created a new variable to establish if the score given by the view was greater than or equal to 4 and used that to bootstrap with the prop() function.
+
+Result: Based on the sample, 5.5% of viewers thought DWTS was confusing. I am 95% confident that somewhere between 3.8% and 11.6% of Americans either agree or strongly agree with the Q2_Confusing question.
+
+Conclusion: Since 3.8% to 11.6% is not close to being the majority of Americans, we can say many Americans don't find this show confusing. For networks airing this show, I would suggest a small explanation of the rules for those who do not understand but keep the concept the same since many still understand the concept.
+
+# Problem 4
+
+```{r include=FALSE, echo=FALSE}
+ebay = read_csv('ebay.csv')
+mean(rev_ratio~adwords_pause, data = ebay)
+diffmean(rev_ratio~adwords_pause, data=resample(ebay))
+boot_ebay <- do(10000)*diffmean(rev_ratio~adwords_pause, data=resample(ebay))
+conf_ebay <- confint(boot_ebay, level=0.95)
+
+```
+
+Question: Should Ebay continue to pay Google for ads to increase their revenue?
+
+Approach: I used bootstrapping to estimate for all of Ebay's DMAs using the diffmean() function to look at the the difference in the revenue ratio after the experiment based on whether the DMA was in the control or treatment group.
+
+Results: Based on just the sample, both the treatment and control group went down in revenue with their average revenue ratios being 0.95 for the DMAs with no ads and 0.89 for the DMAs with ads. I am 95% confident that the difference in the revenue ratio is anywhere between -0.09 to -0.01 with the treatment group having a larger revenue ratio.
+
+Conclusion: Since the revenue ratio is less than 1, it indicates the revenues both went down. However, the confidence interval indicates that the revenues for the DMAs with the ads went down by a greater rate anywhere from 1% to 9% lower than the DMAs that paused the ads. Therefore, I would recommend that Ebay should not spend extra money on Google Ads.
