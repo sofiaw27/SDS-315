@@ -1,0 +1,175 @@
+---
+title: "Homework 5"
+author: "Sofia White, saw4448"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=6, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+
+```
+
+GitHub : <https://github.com/sofiaw27/SDS-315.git>
+
+```{r}
+library(tidyverse)
+library(mosaic)
+library(kableExtra)
+```
+
+```{r}
+nflip(n=2021, prob=0.024)
+
+sim_sec = do(100000)*nflip(n=2021, prob=0.024)
+
+sum(sim_sec >= 70)/100000
+```
+
+# Problem 1
+
+Null hypothesis: Securities trades from the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders.
+
+Test statistic: I used a simulation to repeat the number of trades flagged from 2,021 trades assuming the null hypothesis is true 100,000 times.
+
+Plot:
+
+```{r}
+ggplot(sim_sec) + 
+  geom_histogram(aes(x=nflip), binwidth=1, fill = "hotpink") + labs(title = "Distribution of Trades Flagged", x = "Trades Flagged")
+```
+
+p-value: 0.00204 or 0.2%
+
+Conclusion: Assuming that the SEC is correct with the 2.4% flag rate is correct, it is not impossible that Iron Bank had 70 out of 2,021 trades flagged, however it is very unlikely that 70 or more will be flagged with a 0.2% chance of that happening.
+
+# Problem 2
+
+```{r}
+nflip(n=50, prob=0.03)
+
+sim_bites = do(100000)*nflip(n=50, prob=0.03)
+
+sum(sim_bites >= 8)
+sum(sim_bites >= 8.0)/100000
+
+```
+
+Null Hypothesis: On average, restaurants in the city are cited for health code violations at the same 3% baseline rate.
+
+Test Statistic: I used a simulation to repeat the number of cited health code violations from the 50 investigations Gourmet Bites had assuming the null hypothesis is true 100,000 times.
+
+Plot:
+
+```{r}
+ggplot(sim_bites) + 
+  geom_histogram(aes(x=nflip), binwidth=1, fill = "hotpink") + labs(title = "Distribution of Health Code Violations", x = "Violations")
+```
+
+p-value: 0.00014 or 0.014%
+
+Conclusion: If the null hypothesis is correct, it is not completely impossible that Gourmet Bite's had that many health code violations, however it is extremely unlikely. It is not consistent with the null hypothesis.
+
+# Problem 3
+
+## Part A
+
+```{r}
+brown_sentences = readLines("brown_sentences.txt")
+letter_frequencies = read.csv("letter_frequencies.csv")
+clean = function(text){
+  clean_sentence = gsub("[^A-Za-z]", "", text)
+  clean_sentence = toupper(clean_sentence)
+}
+
+brown_sentences = clean(brown_sentences)
+brown_sentences = data.frame(brown_sentences)
+
+M = 56745
+counts = matrix(0,nrow = M, ncol = 26)
+colnames(counts) <- LETTERS
+for (j in 1:M){
+  for (i in 1:26){
+    counts[j, i] = str_count(brown_sentences$brown_sentences[j], LETTERS[i])
+  }
+} 
+
+brown_freq = brown_sentences|>
+  slice_head(n = M)|>
+  mutate(total = str_length(brown_sentences))|>
+  bind_cols(counts)|>
+  mutate(across(A:Z, ~./total))
+
+chi_sqr = rep(0,M) 
+for (j in 1:M){
+  observed = brown_freq[j, 3:28]
+  expected = letter_frequencies$Probability
+  n = brown_freq[j, 2]
+  
+  chi_sqr[j] = sum(n*(observed - expected)^2/expected)
+}
+hist(chi_sqr)
+
+
+```
+
+## Part B
+
+```{r}
+sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations"
+)
+
+sentences = clean(sentences)
+sentences = data.frame(sentences)
+
+M = 10
+counts = matrix(0,nrow = M, ncol = 26)
+colnames(counts) <- LETTERS
+for (j in 1:M){
+  for (i in 1:26){
+    counts[j, i] = str_count(sentences$sentences[j], LETTERS[i])
+  }
+} 
+
+freq = sentences|>
+  slice_head(n = M)|>
+  mutate(total = str_length(sentences))|>
+  bind_cols(counts)|>
+  mutate(across(A:Z, ~./total))
+
+chi_sqr_partb = rep(0,M) 
+for (j in 1:M){
+  observed = freq[j, 3:28]
+  expected = letter_frequencies$Probability
+  n = brown_freq[j, 2]
+  
+  chi_sqr_partb[j] = sum(n*(observed - expected)^2/expected)
+}
+hist(chi_sqr_partb)
+
+
+p_value = map_dbl(chi_sqr_partb,~sum(chi_sqr > .)/56745)
+p_value = as.tibble(p_value)|>
+  mutate(Sentence = 1:10, .before = 1)
+p_value |>
+  kable(format = "html", caption = "p-values", digits = 3) |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) |>
+    row_spec(0, bold = T)|>
+  column_spec(1, bold = T, border_right = T) |>
+  kable_classic(full_width = TRUE, html_font = "Cambria")
+```
+
+If I were to predict which sentence was produced by an LLM, I would predict it to be sentence 3 because it is the farthest from what we would expect from typical English. The likeliness of a sentence being that far off or more far off is 0.8% which is statistically significant. However, I would also take sentence 6 into consideration because the chances with the same conditions above for that specific sentence are 2.6% which is also statistically significant.
+
+Sentence 8 also caught my eye because as it turns out that sentence perfectly aligns with the null hypothesis of the typical English letter distribution.
