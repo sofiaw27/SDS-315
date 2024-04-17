@@ -1,0 +1,149 @@
+---
+title: "Homework 9"
+author: "Sofia White, EID: saw4448"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+GitHub : <https://github.com/sofiaw27/SDS-315.git>
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=6, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+
+```
+
+```{r echo=FALSE, message=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(mosaic)
+turnout = read.csv("turnout.csv")
+prop = prop(voted1998 ~ GOTV_call, data=turnout)
+prop_test =prop.test(voted1998 ~ GOTV_call, data=turnout)
+
+boot_turnout = do(10000)*diffprop(voted1998 ~ GOTV_call, data=mosaic::resample(turnout))
+
+conf = confint(boot_turnout)
+
+#those who get a call are more likely to vote
+
+```
+
+## Part A
+
+From the data the majority (64.7%) of the calls resulted in the subject voting in 1998 and from calculating a confidence interval, we can be 95% confident that those who received a call were anywhere from 14% to 26% more likely to vote in the 1998 election. However, the call may not be the only factor contributing to the voter outcome.
+
+## Part B
+
+```{r echo=FALSE, message=FALSE}
+
+#mean(AGE ~ GOTV_call, data = turnout)
+#mean(AGE ~ voted1998, data = turnout)
+
+#mean(GOTV_call ~ MAJORPTY, data=turnout) 
+#mean(voted1998 ~ MAJORPTY, data=turnout) 
+
+#mean(GOTV_call ~ voted1996, data=turnout)
+#mean(voted1998 ~ voted1996 , data=turnout)
+
+
+turnout$call <- factor(turnout$GOTV_call, labels = c("No", "Yes"))
+turnout$v_1998 <- factor(turnout$voted1998, labels = c("No", "Yes"))
+
+ggplot(data = turnout) + geom_boxplot(aes(x =AGE, fill = v_1998), position = "dodge") 
+ggplot(data = turnout) + geom_boxplot(aes(x =AGE, fill = call), position = "dodge") 
+
+```
+
+Age: Age can definitely be considered a confounder on the basis that the average age of those that got a call is higher than those that didn't AND the average age of those that voted in 1998 is also higher than of those that did not vote. This means that being older could make a person more likely to vote.
+
+```{r echo=FALSE, message=FALSE}
+
+ggplot(data = turnout) + geom_bar(aes(x =voted1998 ), position = "dodge", fill = 'hotpink') + facet_wrap(~MAJORPTY) + labs(title = "Voted in 1998 split by Major Party")
+
+ggplot(data = turnout) + geom_bar(aes(x =GOTV_call), position = "dodge", fill = 'hotpink') + facet_wrap(~MAJORPTY) + labs(title = "Received a GOTV call split by Major Party")
+```
+
+Majority Party: Based on the data, those registered as one of the 2 main political parties were more likely to have voted in 1998 AND were more likely to have gotten a GOTV call than those that were registered with a thrid party, which makes this variable a confounding variable. We can see this in the two graphs that are faceted by the majority party variable ( 1= registered as main political party, 0 = registered as third party) by looking at the differences in bar heights.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(data = turnout) + geom_bar(aes(x =voted1996, fill = v_1998), position = "dodge") + facet_wrap(~call) + labs(title = "Voted in 1996 split by call")
+```
+
+Voted in 1996: Those that voted in the 1996 election were more likely to have gotten a GOTV call AND were more likely to have voted in 1998 as well.
+
+## Part C
+
+```{r echo=FALSE, message=FALSE}
+library(MatchIt)
+turnout_match = matchit(GOTV_call ~ AGE + MAJORPTY + voted1996, data = turnout, ratio=5)
+summary = summary(turnout_match)
+
+turnout_match_data = match.data(turnout_match)
+
+prop2 = prop(voted1998 ~ GOTV_call, data=turnout_match_data)
+prop_test2 = prop.test(voted1998 ~ GOTV_call, data=turnout_match_data)
+
+boot_match = do(5000)*diffprop(voted1998 ~ GOTV_call, data=resample(turnout_match_data))
+confint(boot_match)
+ggplot(data = boot_match) + geom_histogram(aes(x = diffprop))
+```
+
+Once we matched by whether the person received a call for all the confounding factors we were able to eliminate the statistical uncertainty from the confounders and can make an accurate analysis. The 95% confidence interval indicated that those who received a call were anywhere from 0.8% to 13.6% more likely to have voted in 1998. This means the call had a positive effect on voting but not as large of an effect as we predicted in Part A.
+
+# Problem 2
+
+## Part A
+
+```{r echo=FALSE, message=FALSE}
+solder = read.csv("solder.csv")
+ggplot(data = solder) + geom_boxplot(aes(x = skips, fill = Opening)) + labs(title = "Relation between Skips and Opening")
+
+
+```
+
+This boxplot shows the relationship between the number of skips and the opening size of the opening on the solder gun with small being at the top and large at the bottom. The graph shows as the opening size increases the number of skips decreases.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(data = solder) + geom_boxplot(aes(x = skips, fill = Solder)) + labs(title = "Relation between Skips and Solder")
+```
+
+This plot shows the relationship between the number of skips and the thickness of the alloy. The graph tells us that the thinner alloy experiences a higher number of skips than the thick alloy.
+
+## Part B
+
+```{r echo=FALSE, message=FALSE}
+library(kableExtra)
+library(moderndive)
+lm = lm(skips ~ Opening + Solder + Opening:Solder, data = solder)
+
+table = get_regression_table(lm)
+table = table|>
+  select(term, estimate, lower_ci, upper_ci)
+
+table |>
+  kable(format = "html", caption = "Linear Model Info") |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) |>
+    row_spec(0, bold = T)|>
+  column_spec(1, bold = T, border_right = T) |>
+  column_spec(2, bold = F, border_right = T)|>
+  column_spec(3, bold = F, border_right = T)|>
+  kable_classic(full_width = TRUE, html_font = "Cambria")
+
+```
+
+Intercept: Since the number of skips is discrete and positive this term indicates that when the opening is size large and the solder alloy is thick we can be 95% confident that the number of skips is anywhere from 0 to about 1. The estimated effect for this combination is 0.39. This is the baseline. Since this interval includes 0 it is not statistically significant.
+
+Opening M: When the opening is size medium and the solder is thick we can be 95% confident that the number of skips will be anywhere from about 1 to 4 skips with an estimated effect of about 2 which is about 6 times as many skips as the baseline.
+
+Opening S: When the opening is size small and the solder is thick we can be 95% confident that the number of skips will be anywhere from about 4 to 7 skips with an estimated effect of about 5 which is about 12 times as many skips as the baseline.
+
+Solder Thin: When the opening size is large and the solder is thin we can be 95% confident that the number of skips will be anywhere from about 1 to 4 skips with an estimated effect of about 2 which is about 6 times as many skips as the baseline.
+
+Opening: M:SolderThin: When the opening size is medium and the solder is thin we can be 95% confident that the number of skips will be anywhere from about -3 to 1 and the estimated effect for this interaction is about -1, which is about 2 times less the amount of skips as the baseline. however number of skips cannot practically be below 0. Since this interval includes 0 it is not statistically significant.
+
+Opening: S:SolderThin: When the opening is size small and the solder is think we can be 95% confident that the number of skips will be anywhere from about 8 to 12 with an estimated effect of about 10 which is 24 times as much as the baseline.
+
+## Part D
+
+If I were to recommend a combination I would recommend a medium opening size with a thin solder because the confidence interval includes the smallest numbers and the estimate gives the least amount of skips.
