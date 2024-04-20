@@ -1,0 +1,135 @@
+---
+title: "Homework 10"
+author: "Sofia White, EID: saw4448"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+GitHub : <https://github.com/sofiaw27/SDS-315.git>
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=4, fig.width=6, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+
+```
+
+# Problem 1
+
+```{r echo=FALSE, message=FALSE}
+library(dplyr)
+library(moderndive)
+library(ggplot2)
+library(kableExtra)
+redline = read.csv("redlining.csv")
+plot = ggplot(data = redline ) + geom_point(aes(x = policies, y= minority)) + geom_smooth(aes(x = policies, y= minority), method = 'lm')
+lm = lm(policies ~ minority + fire + age + income, data = redline)
+lm_table = get_regression_table(lm)
+
+```
+
+Question: Are residents being denied insurance from private companies because of their race?
+
+Approach: I first plotted the number of policies against the percentage of minority residents and saw a clear positive correlation. I then ran a linear regression model accounting for all the confounding variables and looked at the regression table for the model.
+
+Results: Based on the linear regression, for every 1 FAIR policy per 100 housing units implemented in a given ZIP code the minority percentage will increase anywhere from 0.003% to 0.014% .
+
+```{r echo=FALSE, message=FALSE}
+lm_table|>
+  select(term, estimate, lower_ci, upper_ci)|>
+  filter(term == "minority")|>
+  kable(format = "html", caption = "Linear Model Info") |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE) |>
+    row_spec(0, bold = T)|>
+  column_spec(1, bold = T, border_right = T) |>
+  column_spec(2, bold = F, border_right = T)|>
+  column_spec(3, bold = F, border_right = T)|>
+  kable_classic(full_width = T, html_font = "Cambria")
+```
+
+Conclusion: We know that more FAIR policies imply more residents that are unable to turn to the private market because they have been denied insurance from the private companies. Our analysis shows that we're 95% confident as the number people denied insurance increases the racial minority populations of a given ZIP code increase anywhere from 0.003% to 0.014% which indicates a weak positive correlation and not practically signicant. Given the extremely low numbers I would say the residents are not being denied insurance because of their race.
+
+# Problem 2
+
+## Part A
+
+```{r echo=FALSE, message=FALSE}
+groceries = read.csv("groceries.csv")
+groceries_summary <- groceries |>
+  group_by(Store) |>
+  summarise(mean_price = mean(Price))
+
+ggplot(groceries_summary, aes(x = Store, y = mean_price)) +
+  geom_bar(stat = "identity", fill = 'maroon') +
+  labs(x = "Store", y = "Mean Price", title = "Average Price per Store")
+
+```
+
+The bar graph shows each store with its average price for all its groceries. From this graph we can see the Fiesta has the cheapest groceries on average and Whole Foods has the most expensive groceries on average.
+
+## Part B
+
+```{r echo=FALSE, message=FALSE}
+groceries_part_b <- groceries|>
+  group_by(Product)|>
+  summarise(num_stores = n_distinct(Store))
+
+ggplot(groceries_part_b, aes(x = num_stores, y = Product)) + geom_bar( stat = "identity", fill = 'hotpink') + labs( x = "Number of Stores", y= "Product", title = "Number of Stores Selling Each Product")
+```
+
+This graph names a product and gives the number of stores that sell that product. We can see the most popular items are carton of eggs, salt and milk cartons.
+
+## Part C
+
+```{r echo=FALSE, message=FALSE}
+lm_groceries = lm(Price ~ Product + Type, data = groceries)
+groceries_table = get_regression_table(lm_groceries)
+
+```
+
+Compared with ordinary grocery stores, convenience stores charge somewhere between 41 cents and 92 cents more for the same product.
+
+## Part D
+
+```{r echo=FALSE, message=FALSE}
+library(stringr)
+lm_2 = lm(Price ~ Product + Store, data = groceries)
+table_2 = get_regression_table(lm_2)
+
+```
+
+When comparing the same product the two stores with the lowest prices are Walmart and Kroger Fresh Fare and the two stores with the highest prices are Whole Foods and Wheatsville Co-op.
+
+## Part E
+
+```{r echo=FALSE, message=FALSE}
+table_2|>
+  filter(str_detect(term, "^Store"))|>
+  mutate(HEB_owned = (term %in%c("Store: H-E-B ", "Store: Central Market")))|>
+  ggplot() + geom_bar(aes(x = estimate, y= reorder(term, -estimate),fill = HEB_owned),stat = "identity") + labs( title = "Holding Products Constant", y = "Store")
+
+lm_3 = lm(Price ~ Store, data = groceries)
+table_3 = get_regression_table(lm_3)
+table_3|>
+  filter(str_detect(term, "^Store"))|>
+  mutate(HEB_owned = (term %in%c("Store: H-E-B ", "Store: Central Market")))|>
+  ggplot() + geom_bar(aes(x = estimate, y= reorder(term, -estimate),fill = HEB_owned), stat="identity") + labs(title = "Without Holding Products Constant", y="Store")
+```
+
+Just looking at the difference in each stores coefficients, the difference between Central Market and HEB are the same whether we hold products constant or not where Central Market is on average 7 cents more expensive. This leads me to think that the Central Market is charging more for the same products that HEB sells (it's a scam lol). In the graph above we can see how the coefficients compare to the other stores. Although Central Market is slightly more expensive its prices are very close to HEB for the same products relative to the other stores in this data. It depends if 7 cents is a big deal to you as the customer. As someone who relies on the dining hall and rarely goes grocery shopping I would say the Central Market charges a similar amount to HEB for the same product.
+
+## Part F
+
+```{r echo=FALSE, message=FALSE}
+library(effectsize)
+groceries = groceries|>
+  mutate(Income10K = Income/10000)
+lm_income = lm(Price ~ Product + Income10K, data = groceries)
+income_table = get_regression_table(lm_income)
+std = standardize_parameters(lm_income)
+
+```
+
+While holding products constant the Income10K coefficient is negative which means as income goes up by increments of \$10,000 the price decreases by about a cent. Consumers in poorer ZIP codes seem to pay more for the same product.
+
+One-standard deviation increase in the income of a ZIP code seems to be associated with\
+a 0.03 standard-deviation decrease in the price that consumers in that ZIP code expect to pay for the same product.
